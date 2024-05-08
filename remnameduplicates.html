@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remove Duplicates from Excel</title>
+</head>
+<body>
+    <h1>Remove Duplicates from Excel</h1>
+    <input type="file" id="excelFileInput" accept=".xls, .xlsx">
+    <button id="processButton">Process Excel</button>
+    <a id="downloadLink" style="display: none;">Download Processed Excel</a>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.3/xlsx.full.min.js"></script>
+    <script>
+        document.getElementById('processButton').addEventListener('click', function() {
+            const fileInput = document.getElementById('excelFileInput');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Please select a file.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const data = event.target.result;
+                const workbook = XLSX.read(data, { type: 'binary' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+
+                // Convert worksheet to JSON
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                // Remove duplicates
+                const uniqueData = Array.from(new Set(jsonData.map(JSON.stringify)), JSON.parse);
+
+                // Convert JSON back to worksheet
+                const newWorksheet = XLSX.utils.aoa_to_sheet(uniqueData);
+
+                // Convert worksheet to workbook
+                const newWorkbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(newWorkbook, newWorksheet, sheetName);
+
+                // Convert workbook to binary data
+                const excelBuffer = XLSX.write(newWorkbook, { type: 'array', bookType: 'xlsx' });
+                const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+                // Create download link
+                const downloadLink = document.getElementById('downloadLink');
+                downloadLink.href = URL.createObjectURL(blob);
+                downloadLink.download = 'fisier_procesat.xlsx';
+                downloadLink.style.display = 'inline';
+            };
+            reader.readAsBinaryString(file);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remove Duplicates after CNP</title>
+</head>
+<body>
+    <h1>Remove Duplicates after CNP</h1>
+    <input type="file" id="excelFileInput" accept=".xls, .xlsx">
+    <button id="processButton">Process Excel</button>
+    <a id="downloadLink" style="display: none;">Download Processed Excel</a>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.3/xlsx.full.min.js"></script>
+    <script>
+        document.getElementById('processButton').addEventListener('click', function() {
+            const fileInput = document.getElementById('excelFileInput');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Please select a file.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const data = event.target.result;
+                const workbook = XLSX.read(data, { type: 'binary' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+
+                // Convert worksheet to JSON
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                // Find column index for CNP
+                const headerRow = jsonData[0];
+                const cnpIndex = headerRow.findIndex(cell => cell.toLowerCase() === 'cnp');
+                
+                if (cnpIndex === -1) {
+                    alert('CNP column not found.');
+                    return;
+                }
+
+                // Remove duplicates after CNP
+                const uniqueData = [headerRow]; // Include header row in unique data
+                const cnpSet = new Set();
+                for (let i = 1; i < jsonData.length; i++) {
+                    const cnp = jsonData[i][cnpIndex];
+                    if (!cnpSet.has(cnp)) {
+                        uniqueData.push(jsonData[i]);
+                        cnpSet.add(cnp);
+                    }
+                }
+
+                // Convert JSON back to worksheet
+                const newWorksheet = XLSX.utils.aoa_to_sheet(uniqueData);
+
+                // Convert worksheet to workbook
+                const newWorkbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(newWorkbook, newWorksheet, sheetName);
+
+                // Convert workbook to binary data
+                const excelBuffer = XLSX.write(newWorkbook, { type: 'array', bookType: 'xlsx' });
+                const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+                // Create download link
+                const downloadLink = document.getElementById('downloadLink');
+                downloadLink.href = URL.createObjectURL(blob);
+                downloadLink.download = 'processed_excel.xlsx';
+                downloadLink.style.display = 'inline';
+            };
+            reader.readAsBinaryString(file);
+        });
+    </script>
+</body>
+</html>
